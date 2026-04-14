@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: financial_api
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: financial_api_production
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U financial_api"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      RAILS_MASTER_KEY: 668916da6f1125b0386b65c552220b2b
+      DATABASE_URL: postgres://financial_api:password@db:5432/financial_api_production
+      RAILS_ENV: production
+      RAILS_LOG_TO_STDOUT: "1"
+
+volumes:
+  postgres_data:
