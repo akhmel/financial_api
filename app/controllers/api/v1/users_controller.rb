@@ -7,7 +7,7 @@ module Api
         user = User.create!(user_params)
         token = JwtService.encode({ user_id: user.id })
 
-        render json: { user: user_response(user), token: token }, status: :created
+        render json: { user: user_response(user) }, status: :created
       end
 
       def show
@@ -23,7 +23,7 @@ module Api
       end
 
       def user_response(user)
-        { id: user.id, email: user.email, balance: user.balance.to_f }
+        { id: user.id, email: user.email }
       end
     end
   end

@@ -10,7 +10,11 @@ RSpec.describe User do
   describe "validations" do
     it { is_expected.to validate_presence_of(:email) }
     it { is_expected.to validate_uniqueness_of(:email).case_insensitive }
-    it { is_expected.to validate_numericality_of(:balance).is_greater_than_or_equal_to(0) }
+    it "rejects negative balance" do
+      user = build(:user, balance: -1)
+      expect(user).not_to be_valid
+      expect(user.errors[:balance]).to be_present
+    end
 
     it "rejects invalid email format" do
       user = build(:user, email: "not-an-email")
@@ -27,7 +31,7 @@ RSpec.describe User do
   describe "default values" do
     it "has zero balance by default" do
       user = create(:user)
-      expect(user.balance).to eq(0)
+      expect(user.balance).to eq(Money.from_amount(0))
     end
   end
 
@@ -35,15 +39,15 @@ RSpec.describe User do
     let(:user) { build(:user, balance: 500) }
 
     it "returns true when balance covers the amount" do
-      expect(user.sufficient_funds?(500)).to be true
+      expect(user.sufficient_funds?(Money.from_amount(500))).to be true
     end
 
     it "returns true when balance exceeds the amount" do
-      expect(user.sufficient_funds?(100)).to be true
+      expect(user.sufficient_funds?(Money.from_amount(100))).to be true
     end
 
     it "returns false when balance is less than the amount" do
-      expect(user.sufficient_funds?(501)).to be false
+      expect(user.sufficient_funds?(Money.from_amount(501))).to be false
     end
   end
 end

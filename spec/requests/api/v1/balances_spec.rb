@@ -5,12 +5,12 @@ RSpec.describe "Api::V1::Balances" do
 
   describe "GET /api/v1/balance" do
     context "when authenticated" do
-      it "returns the current balance" do
+      it "returns the current balance in cents" do
         get api_v1_balance_path, headers: auth_headers(user)
 
         expect(response).to have_http_status(:ok)
         expect(json_response[:user_id]).to eq(user.id)
-        expect(json_response[:balance]).to eq(500.0)
+        expect(json_response[:balance]).to eq(50_000)
       end
     end
 
@@ -27,33 +27,41 @@ RSpec.describe "Api::V1::Balances" do
     context "with valid amount" do
       it "increases the balance" do
         post deposit_api_v1_balance_path,
-             params: { amount: 200 }.to_json,
-             headers: auth_headers(user)
+             params: { amount: 20_000 }.to_json,
+             headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:ok)
-        expect(json_response[:balance]).to eq(700.0)
+        expect(json_response[:balance]).to eq(70_000)
       end
 
       it "creates a deposit transaction" do
         expect {
           post deposit_api_v1_balance_path,
-               params: { amount: 200 }.to_json,
-               headers: auth_headers(user)
+               params: { amount: 20_000 }.to_json,
+               headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
         }.to change(Transaction, :count).by(1)
 
         expect(Transaction.last).to be_deposit
-        expect(Transaction.last.amount).to eq(200)
+        expect(Transaction.last.amount_cents).to eq(20_000)
       end
     end
 
-    context "with decimal amount" do
-      it "handles cents correctly" do
+    context "with non-integer amount" do
+      it "rejects decimal values" do
         post deposit_api_v1_balance_path,
              params: { amount: "99.99" }.to_json,
-             headers: auth_headers(user)
+             headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
-        expect(response).to have_http_status(:ok)
-        expect(json_response[:balance]).to eq(599.99)
+        expect(response).to have_http_status(:bad_request)
+        expect(json_response[:error]).to eq("Invalid amount format")
+      end
+
+      it "does not change the balance" do
+        post deposit_api_v1_balance_path,
+             params: { amount: "100.50" }.to_json,
+             headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
+
+        expect(user.reload.balance_cents).to eq(50_000)
       end
     end
 
@@ -61,10 +69,10 @@ RSpec.describe "Api::V1::Balances" do
       it "returns bad request" do
         post deposit_api_v1_balance_path,
              params: { amount: 0 }.to_json,
-             headers: auth_headers(user)
+             headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
-        expect(json_response[:error]).to eq("Amount must be positive")
+        expect(json_response[:error]).to eq("Amount must be a positive integer (cents)")
       end
     end
 
@@ -72,10 +80,10 @@ RSpec.describe "Api::V1::Balances" do
       it "returns bad request" do
         post deposit_api_v1_balance_path,
              params: { amount: -50 }.to_json,
-             headers: auth_headers(user)
+             headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
-        expect(json_response[:error]).to eq("Amount must be positive")
+        expect(json_response[:error]).to eq("Amount must be a positive integer (cents)")
       end
     end
 
@@ -83,7 +91,7 @@ RSpec.describe "Api::V1::Balances" do
       it "returns bad request" do
         post deposit_api_v1_balance_path,
              params: {}.to_json,
-             headers: auth_headers(user)
+             headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
       end
@@ -94,22 +102,22 @@ RSpec.describe "Api::V1::Balances" do
 
       it "processes the first request normally" do
         post deposit_api_v1_balance_path,
-             params: { amount: 200 }.to_json,
+             params: { amount: 20_000 }.to_json,
              headers: auth_headers(user).merge("Idempotency-Key" => key)
 
         expect(response).to have_http_status(:ok)
-        expect(json_response[:balance]).to eq(700.0)
+        expect(json_response[:balance]).to eq(70_000)
       end
 
       it "rejects a duplicate request with the same key" do
         post deposit_api_v1_balance_path,
-             params: { amount: 200 }.to_json,
+             params: { amount: 20_000 }.to_json,
              headers: auth_headers(user).merge("Idempotency-Key" => key)
 
         expect(response).to have_http_status(:ok)
 
         post deposit_api_v1_balance_path,
-             params: { amount: 200 }.to_json,
+             params: { amount: 20_000 }.to_json,
              headers: auth_headers(user).merge("Idempotency-Key" => key)
 
         expect(response).to have_http_status(:conflict)
@@ -119,30 +127,37 @@ RSpec.describe "Api::V1::Balances" do
       it "does not apply the balance twice" do
         2.times do
           post deposit_api_v1_balance_path,
-               params: { amount: 200 }.to_json,
+               params: { amount: 20_000 }.to_json,
                headers: auth_headers(user).merge("Idempotency-Key" => key)
         end
 
-        expect(user.reload.balance).to eq(700)
+        expect(user.reload.balance_cents).to eq(70_000)
       end
     end
 
     context "without idempotency key" do
-      it "allows repeated requests" do
-        2.times do
-          post deposit_api_v1_balance_path,
-               params: { amount: 100 }.to_json,
-               headers: auth_headers(user)
-        end
+      it "returns bad request" do
+        post deposit_api_v1_balance_path,
+             params: { amount: 10_000 }.to_json,
+             headers: auth_headers(user)
 
-        expect(user.reload.balance).to eq(700)
+        expect(response).to have_http_status(:bad_request)
+        expect(json_response[:error]).to eq("Idempotency-Key header is required")
+      end
+
+      it "does not change the balance" do
+        post deposit_api_v1_balance_path,
+             params: { amount: 10_000 }.to_json,
+             headers: auth_headers(user)
+
+        expect(user.reload.balance_cents).to eq(50_000)
       end
     end
 
     context "without authentication" do
       it "returns unauthorized" do
         post deposit_api_v1_balance_path,
-             params: { amount: 100 }.to_json,
+             params: { amount: 10_000 }.to_json,
              headers: json_headers
 
         expect(response).to have_http_status(:unauthorized)
@@ -154,18 +169,18 @@ RSpec.describe "Api::V1::Balances" do
     context "with sufficient funds" do
       it "decreases the balance" do
         post withdraw_api_v1_balance_path,
-             params: { amount: 200 }.to_json,
-             headers: auth_headers(user)
+             params: { amount: 20_000 }.to_json,
+             headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:ok)
-        expect(json_response[:balance]).to eq(300.0)
+        expect(json_response[:balance]).to eq(30_000)
       end
 
       it "creates a withdraw transaction" do
         expect {
           post withdraw_api_v1_balance_path,
-               params: { amount: 200 }.to_json,
-               headers: auth_headers(user)
+               params: { amount: 20_000 }.to_json,
+               headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
         }.to change(Transaction, :count).by(1)
 
         expect(Transaction.last).to be_withdraw
@@ -175,19 +190,19 @@ RSpec.describe "Api::V1::Balances" do
     context "withdrawing exact balance" do
       it "allows withdrawing the full balance" do
         post withdraw_api_v1_balance_path,
-             params: { amount: 500 }.to_json,
-             headers: auth_headers(user)
+             params: { amount: 50_000 }.to_json,
+             headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:ok)
-        expect(json_response[:balance]).to eq(0.0)
+        expect(json_response[:balance]).to eq(0)
       end
     end
 
     context "with insufficient funds" do
       it "returns unprocessable entity" do
         post withdraw_api_v1_balance_path,
-             params: { amount: 999 }.to_json,
-             headers: auth_headers(user)
+             params: { amount: 99_900 }.to_json,
+             headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(json_response[:error]).to eq("Insufficient funds")
@@ -195,10 +210,10 @@ RSpec.describe "Api::V1::Balances" do
 
       it "does not change the balance" do
         post withdraw_api_v1_balance_path,
-             params: { amount: 999 }.to_json,
-             headers: auth_headers(user)
+             params: { amount: 99_900 }.to_json,
+             headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
-        expect(user.reload.balance).to eq(500)
+        expect(user.reload.balance_cents).to eq(50_000)
       end
     end
 
@@ -207,18 +222,48 @@ RSpec.describe "Api::V1::Balances" do
 
       it "rejects a duplicate withdrawal" do
         post withdraw_api_v1_balance_path,
-             params: { amount: 100 }.to_json,
+             params: { amount: 10_000 }.to_json,
              headers: auth_headers(user).merge("Idempotency-Key" => key)
 
         expect(response).to have_http_status(:ok)
-        expect(json_response[:balance]).to eq(400.0)
+        expect(json_response[:balance]).to eq(40_000)
 
         post withdraw_api_v1_balance_path,
-             params: { amount: 100 }.to_json,
+             params: { amount: 10_000 }.to_json,
              headers: auth_headers(user).merge("Idempotency-Key" => key)
 
         expect(response).to have_http_status(:conflict)
-        expect(user.reload.balance).to eq(400)
+        expect(user.reload.balance_cents).to eq(40_000)
+      end
+    end
+
+    context "without idempotency key" do
+      it "returns bad request" do
+        post withdraw_api_v1_balance_path,
+             params: { amount: 10_000 }.to_json,
+             headers: auth_headers(user)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json_response[:error]).to eq("Idempotency-Key header is required")
+      end
+    end
+
+    context "with non-integer amount" do
+      it "rejects decimal values" do
+        post withdraw_api_v1_balance_path,
+             params: { amount: "0.50" }.to_json,
+             headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json_response[:error]).to eq("Invalid amount format")
+      end
+
+      it "does not change the balance" do
+        post withdraw_api_v1_balance_path,
+             params: { amount: "100.001" }.to_json,
+             headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
+
+        expect(user.reload.balance_cents).to eq(50_000)
       end
     end
 
@@ -226,7 +271,7 @@ RSpec.describe "Api::V1::Balances" do
       it "returns bad request" do
         post withdraw_api_v1_balance_path,
              params: { amount: 0 }.to_json,
-             headers: auth_headers(user)
+             headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
       end
@@ -235,7 +280,7 @@ RSpec.describe "Api::V1::Balances" do
     context "without authentication" do
       it "returns unauthorized" do
         post withdraw_api_v1_balance_path,
-             params: { amount: 100 }.to_json,
+             params: { amount: 10_000 }.to_json,
              headers: json_headers
 
         expect(response).to have_http_status(:unauthorized)

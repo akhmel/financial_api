@@ -1,5 +1,5 @@
 class JwtService
-  SECRET = ENV["JWT_SECRET"] || Rails.application.credentials.jwt_secret
+  SECRET = ENV.fetch("JWT_SECRET") { Rails.application.credentials.jwt_secret || "dev-secret-please-change" }
   ALGORITHM = "HS256"
 
   def self.encode(payload, exp: 24.hours.from_now)

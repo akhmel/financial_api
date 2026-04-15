@@ -7,7 +7,11 @@ RSpec.describe Transaction do
   end
 
   describe "validations" do
-    it { is_expected.to validate_numericality_of(:amount).is_greater_than(0) }
+    it "rejects non-positive amount" do
+      txn = build(:transaction, amount: 0)
+      expect(txn).not_to be_valid
+      expect(txn.errors[:amount]).to be_present
+    end
 
     it "requires a kind" do
       txn = build(:transaction, kind: nil)
@@ -50,7 +54,7 @@ RSpec.describe Transaction do
     it "creates a deposit transaction" do
       txn = create(:transaction, user: user, kind: :deposit, amount: 100)
       expect(txn).to be_deposit
-      expect(txn.amount).to eq(100)
+      expect(txn.amount).to eq(Money.from_amount(100))
     end
 
     it "creates a transfer transaction with recipient" do

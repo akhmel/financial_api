@@ -5,10 +5,10 @@ module ErrorHandler
     rescue_from AuthenticationError, with: :handle_unauthorized
     rescue_from ActiveRecord::RecordNotFound, with: :handle_not_found
     rescue_from ActiveRecord::RecordInvalid, with: :handle_unprocessable
-    rescue_from BalanceService::InsufficientFundsError, with: :handle_unprocessable
+    rescue_from InsufficientFundsError, with: :handle_unprocessable
     rescue_from BadRequestError, with: :handle_bad_request
     rescue_from ActionController::ParameterMissing, with: :handle_bad_request
-    rescue_from BalanceService::DuplicateRequestError, with: :handle_conflict
+    rescue_from DuplicateRequestError, with: :handle_conflict
   end
 
   private

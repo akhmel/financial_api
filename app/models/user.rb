@@ -9,7 +9,7 @@ class User < ApplicationRecord
 
   validates :password, length: { minimum: 12 }, if: :password_digest_changed?
 
-  validates :balance, numericality: { greater_than_or_equal_to: 0 }
+  monetize :balance_cents, numericality: { greater_than_or_equal_to: 0 }
 
   before_save :downcase_email
 

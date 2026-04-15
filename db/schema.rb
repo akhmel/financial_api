@@ -10,13 +10,13 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_15_081139) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_14_191048) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
 
   create_table "transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.decimal "amount", precision: 15, scale: 2, null: false
+    t.bigint "amount_cents", default: 0, null: false
     t.datetime "created_at", null: false
     t.string "idempotency_key"
     t.integer "kind", null: false
@@ -29,13 +29,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_15_081139) do
   end
 
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.decimal "balance", precision: 15, scale: 2, default: "0.0", null: false
+    t.bigint "balance_cents", default: 0, null: false
     t.datetime "created_at", null: false
     t.string "email", null: false
     t.string "password_digest", null: false
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
-    t.check_constraint "balance >= 0::numeric", name: "users_balance_non_negative"
+    t.check_constraint "balance_cents >= 0", name: "users_balance_cents_non_negative"
   end
 
   add_foreign_key "transactions", "users"

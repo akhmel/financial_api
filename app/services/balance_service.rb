@@ -1,8 +1,6 @@
 class BalanceService
-  InsufficientFundsError = Class.new(StandardError)
-  DuplicateRequestError = Class.new(StandardError)
-
-  def self.deposit(user:, amount:, idempotency_key: nil)
+  def self.deposit(user:, amount:, idempotency_key:)
+    amount = parse_amount!(amount)
     guard_idempotency!(idempotency_key)
 
     ActiveRecord::Base.transaction do
@@ -11,11 +9,11 @@ class BalanceService
       user.transactions.create!(kind: :deposit, amount: amount, idempotency_key: idempotency_key)
     end
 
-    log(:deposit, user_id: user.id, amount: amount, new_balance: user.balance)
     user
   end
 
-  def self.withdraw(user:, amount:, idempotency_key: nil)
+  def self.withdraw(user:, amount:, idempotency_key:)
+    amount = parse_amount!(amount)
     guard_idempotency!(idempotency_key)
 
     ActiveRecord::Base.transaction do
@@ -25,12 +23,11 @@ class BalanceService
       user.update!(balance: user.balance - amount)
       user.transactions.create!(kind: :withdraw, amount: amount, idempotency_key: idempotency_key)
     end
-
-    log(:withdraw, user_id: user.id, amount: amount, new_balance: user.balance)
     user
   end
 
-  def self.transfer(sender:, recipient:, amount:, idempotency_key: nil)
+  def self.transfer(sender:, recipient:, amount:, idempotency_key:)
+    amount = parse_amount!(amount)
     raise BadRequestError, "Cannot transfer to yourself" if sender.id == recipient.id
 
     guard_idempotency!(idempotency_key)
@@ -53,15 +50,25 @@ class BalanceService
     end
 
     sender.reload
-    log(:transfer, sender_id: sender.id, recipient_id: recipient.id, amount: amount, sender_balance: sender.balance)
     sender
   end
 
   def self.guard_idempotency!(key)
-    return if key.blank?
+    raise BadRequestError, "Idempotency-Key header is required" if key.blank?
     raise DuplicateRequestError, "Duplicate request" if Transaction.exists?(idempotency_key: key)
   end
   private_class_method :guard_idempotency!
+
+  INTEGER_FORMAT = /\A-?\d+\z/
+
+  def self.parse_amount!(value)
+    raw = value.to_s
+    raise BadRequestError, "Invalid amount format" unless raw.match?(INTEGER_FORMAT)
+    raise BadRequestError, "Amount must be a positive integer (cents)" unless raw.to_i.positive?
+
+    Money.new(raw.to_i)
+  end
+  private_class_method :parse_amount!
 
   def self.log(action, **details)
     Rails.logger.info("[BalanceService] #{action}: #{details.map { |k, v| "#{k}=#{v}" }.join(' ')}")

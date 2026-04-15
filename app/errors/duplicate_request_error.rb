@@ -1,0 +1,1 @@
+class DuplicateRequestError < StandardError; end

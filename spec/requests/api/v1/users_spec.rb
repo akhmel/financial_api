@@ -10,7 +10,7 @@ RSpec.describe "Api::V1::Users" do
 
         expect(response).to have_http_status(:created)
         expect(json_response[:user][:email]).to eq("new@example.com")
-        expect(json_response[:user][:balance]).to eq(0.0)
+        expect(json_response[:user][:balance]).to eq(0)
         expect(json_response[:token]).to be_present
       end
 
@@ -67,7 +67,7 @@ RSpec.describe "Api::V1::Users" do
         expect(response).to have_http_status(:ok)
         expect(json_response[:user][:id]).to eq(user.id)
         expect(json_response[:user][:email]).to eq(user.email)
-        expect(json_response[:user][:balance]).to eq(1000.0)
+        expect(json_response[:user][:balance]).to eq(100_000)
       end
     end
 

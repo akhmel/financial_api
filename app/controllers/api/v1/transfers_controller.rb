@@ -3,25 +3,20 @@ module Api
     class TransfersController < ApplicationController
       def create
         recipient = User.find(params.require(:recipient_id))
+        amount = params.require(:amount)
 
         BalanceService.transfer(
           sender: current_user,
           recipient: recipient,
-          amount: amount_param,
+          amount: amount,
           idempotency_key: idempotency_key
         )
 
         render json: {
-          sender: { id: current_user.id, balance: current_user.balance.to_f },
+          sender: { id: current_user.id, balance: current_user.balance_cents },
           recipient: { id: recipient.id },
-          amount: amount_param.to_f
+          amount: amount.to_i
         }, status: :created
-      end
-
-      private
-
-      def amount_param
-        AmountValidator.parse!(params.require(:amount))
       end
     end
   end

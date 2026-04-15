@@ -1,0 +1,1 @@
+class InsufficientFundsError < StandardError; end

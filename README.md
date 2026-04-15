@@ -4,9 +4,11 @@ A concise Ruby on Rails API-only application for basic financial operations: use
 
 ## Tech Stack
 
-- Ruby 3.3 + Rails 8.1 (API-only)
+- Ruby 4.0.2 + Rails 8.1 (API-only)
 - PostgreSQL
 - JWT authentication (HS256)
+- [money-rails](https://github.com/RubyMoney/money-rails) — all monetary values are stored as integers (cents) to avoid floating-point precision issues
+- Mandatory `Idempotency-Key` header on all mutation endpoints to guarantee safe retries
 
 ## Setup
 
@@ -44,7 +46,7 @@ Response (`201 Created`):
 
 ```json
 {
-  "user": { "id": "a1b2c3d4-...", "email": "alice@example.com", "balance": 0.0 },
+  "user": { "id": "a1b2c3d4-...", "email": "alice@example.com", "balance": 0 },
   "token": "eyJhbGciOiJIUzI1NiJ9..."
 }
 ```
@@ -75,10 +77,14 @@ curl http://localhost:3000/api/v1/balance \
 Response (`200 OK`):
 
 ```json
-{ "user_id": "a1b2c3d4-...", "balance": 0.0 }
+{ "user_id": "a1b2c3d4-...", "balance": 0 }
 ```
 
 ### 4. Deposit / Withdraw funds
+
+All amounts are in **cents** (integer). For example, `100000` = $1,000.00.
+
+Every mutation request (deposit, withdraw, transfer) **requires** an `Idempotency-Key` header (any unique string, e.g. a UUID). The server rejects duplicate requests with `409 Conflict`, guaranteeing each operation is applied exactly once even on network retries.
 
 **Deposit:**
 
@@ -86,7 +92,8 @@ Response (`200 OK`):
 curl -X POST http://localhost:3000/api/v1/balance/deposit \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <TOKEN>" \
-  -d '{"amount": 1000}'
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"amount": 100000}'
 ```
 
 **Withdraw:**
@@ -95,13 +102,14 @@ curl -X POST http://localhost:3000/api/v1/balance/deposit \
 curl -X POST http://localhost:3000/api/v1/balance/withdraw \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <TOKEN>" \
-  -d '{"amount": 200}'
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"amount": 20000}'
 ```
 
 Response (`200 OK`):
 
 ```json
-{ "user_id": "a1b2c3d4-...", "balance": 800.0 }
+{ "user_id": "a1b2c3d4-...", "balance": 80000 }
 ```
 
 ### 5. Transfer funds between users
@@ -112,15 +120,16 @@ First create a second user and note their `id`. Then transfer from the authentic
 curl -X POST http://localhost:3000/api/v1/transfers \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <SENDER_TOKEN>" \
-  -d '{"recipient_id": "<RECIPIENT_UUID>", "amount": 300}'
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"recipient_id": "<RECIPIENT_UUID>", "amount": 30000}'
 ```
 
 Response (`201 Created`):
 
 ```json
 {
-  "sender": { "id": "a1b2c3d4-...", "balance": 500.0 },
+  "sender": { "id": "a1b2c3d4-...", "balance": 50000 },
   "recipient": { "id": "e5f6a7b8-..." },
-  "amount": 300.0
+  "amount": 30000
 }
 ```
