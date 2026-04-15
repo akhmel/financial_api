@@ -89,6 +89,56 @@ RSpec.describe "Api::V1::Balances" do
       end
     end
 
+    context "with idempotency key" do
+      let(:key) { SecureRandom.uuid }
+
+      it "processes the first request normally" do
+        post deposit_api_v1_balance_path,
+             params: { amount: 200 }.to_json,
+             headers: auth_headers(user).merge("Idempotency-Key" => key)
+
+        expect(response).to have_http_status(:ok)
+        expect(json_response[:balance]).to eq(700.0)
+      end
+
+      it "rejects a duplicate request with the same key" do
+        post deposit_api_v1_balance_path,
+             params: { amount: 200 }.to_json,
+             headers: auth_headers(user).merge("Idempotency-Key" => key)
+
+        expect(response).to have_http_status(:ok)
+
+        post deposit_api_v1_balance_path,
+             params: { amount: 200 }.to_json,
+             headers: auth_headers(user).merge("Idempotency-Key" => key)
+
+        expect(response).to have_http_status(:conflict)
+        expect(json_response[:error]).to eq("Duplicate request")
+      end
+
+      it "does not apply the balance twice" do
+        2.times do
+          post deposit_api_v1_balance_path,
+               params: { amount: 200 }.to_json,
+               headers: auth_headers(user).merge("Idempotency-Key" => key)
+        end
+
+        expect(user.reload.balance).to eq(700)
+      end
+    end
+
+    context "without idempotency key" do
+      it "allows repeated requests" do
+        2.times do
+          post deposit_api_v1_balance_path,
+               params: { amount: 100 }.to_json,
+               headers: auth_headers(user)
+        end
+
+        expect(user.reload.balance).to eq(700)
+      end
+    end
+
     context "without authentication" do
       it "returns unauthorized" do
         post deposit_api_v1_balance_path,
@@ -149,6 +199,26 @@ RSpec.describe "Api::V1::Balances" do
              headers: auth_headers(user)
 
         expect(user.reload.balance).to eq(500)
+      end
+    end
+
+    context "with idempotency key" do
+      let(:key) { SecureRandom.uuid }
+
+      it "rejects a duplicate withdrawal" do
+        post withdraw_api_v1_balance_path,
+             params: { amount: 100 }.to_json,
+             headers: auth_headers(user).merge("Idempotency-Key" => key)
+
+        expect(response).to have_http_status(:ok)
+        expect(json_response[:balance]).to eq(400.0)
+
+        post withdraw_api_v1_balance_path,
+             params: { amount: 100 }.to_json,
+             headers: auth_headers(user).merge("Idempotency-Key" => key)
+
+        expect(response).to have_http_status(:conflict)
+        expect(user.reload.balance).to eq(400)
       end
     end
 

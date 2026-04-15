@@ -144,5 +144,47 @@ RSpec.describe "Api::V1::Transfers" do
         expect(recipient.reload.balance).to eq(350.75)
       end
     end
+
+    context "with idempotency key" do
+      let(:key) { SecureRandom.uuid }
+      let(:params) { { recipient_id: recipient.id, amount: 300 } }
+
+      it "processes the first transfer normally" do
+        post api_v1_transfers_path,
+             params: params.to_json,
+             headers: auth_headers(sender).merge("Idempotency-Key" => key)
+
+        expect(response).to have_http_status(:created)
+        expect(sender.reload.balance).to eq(700)
+        expect(recipient.reload.balance).to eq(500)
+      end
+
+      it "rejects a duplicate transfer" do
+        post api_v1_transfers_path,
+             params: params.to_json,
+             headers: auth_headers(sender).merge("Idempotency-Key" => key)
+
+        expect(response).to have_http_status(:created)
+
+        post api_v1_transfers_path,
+             params: params.to_json,
+             headers: auth_headers(sender).merge("Idempotency-Key" => key)
+
+        expect(response).to have_http_status(:conflict)
+        expect(json_response[:error]).to eq("Duplicate request")
+      end
+
+      it "does not double-debit sender on retry" do
+        2.times do
+          post api_v1_transfers_path,
+               params: params.to_json,
+               headers: auth_headers(sender).merge("Idempotency-Key" => key)
+        end
+
+        expect(sender.reload.balance).to eq(700)
+        expect(recipient.reload.balance).to eq(500)
+        expect(Transaction.where(idempotency_key: key).count).to eq(1)
+      end
+    end
   end
 end

@@ -6,13 +6,13 @@ module Api
       end
 
       def deposit
-        BalanceService.deposit(user: current_user, amount: amount_param)
+        BalanceService.deposit(user: current_user, amount: amount_param, idempotency_key: idempotency_key)
 
         render json: { user_id: current_user.id, balance: current_user.balance.to_f }
       end
 
       def withdraw
-        BalanceService.withdraw(user: current_user, amount: amount_param)
+        BalanceService.withdraw(user: current_user, amount: amount_param, idempotency_key: idempotency_key)
 
         render json: { user_id: current_user.id, balance: current_user.balance.to_f }
       end
@@ -26,6 +26,10 @@ module Api
         amount
       rescue ::ArgumentError
         raise BadRequestError, "Invalid amount"
+      end
+
+      def idempotency_key
+        request.headers["Idempotency-Key"]
       end
     end
   end

@@ -8,6 +8,7 @@ module ErrorHandler
     rescue_from BalanceService::InsufficientFundsError, with: :handle_unprocessable
     rescue_from BadRequestError, with: :handle_bad_request
     rescue_from ActionController::ParameterMissing, with: :handle_bad_request
+    rescue_from BalanceService::DuplicateRequestError, with: :handle_conflict
   end
 
   private
@@ -26,5 +27,9 @@ module ErrorHandler
 
   def handle_bad_request(error)
     render json: { error: error.message }, status: :bad_request
+  end
+
+  def handle_conflict(error)
+    render json: { error: error.message }, status: :conflict
   end
 end

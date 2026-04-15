@@ -6,4 +6,5 @@ class Transaction < ApplicationRecord
 
   validates :amount, numericality: { greater_than: 0 }
   validates :kind, presence: true
+  validates :idempotency_key, uniqueness: true, allow_nil: true
 end

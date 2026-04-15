@@ -13,6 +13,31 @@ RSpec.describe Transaction do
       txn = build(:transaction, kind: nil)
       expect(txn).not_to be_valid
     end
+
+    context "idempotency_key" do
+      it "allows nil idempotency_key" do
+        txn = build(:transaction, idempotency_key: nil)
+        expect(txn).to be_valid
+      end
+
+      it "allows unique idempotency_key" do
+        txn = build(:transaction, :with_idempotency_key)
+        expect(txn).to be_valid
+      end
+
+      it "rejects duplicate idempotency_key" do
+        existing = create(:transaction, :with_idempotency_key)
+        duplicate = build(:transaction, idempotency_key: existing.idempotency_key)
+        expect(duplicate).not_to be_valid
+        expect(duplicate.errors[:idempotency_key]).to include("has already been taken")
+      end
+
+      it "allows multiple nil idempotency_keys" do
+        create(:transaction, idempotency_key: nil)
+        txn = build(:transaction, idempotency_key: nil)
+        expect(txn).to be_valid
+      end
+    end
   end
 
   describe "enum" do
@@ -33,6 +58,12 @@ RSpec.describe Transaction do
       txn = create(:transaction, :transfer, user: user, recipient: recipient, amount: 50)
       expect(txn).to be_transfer
       expect(txn.recipient).to eq(recipient)
+    end
+
+    it "persists idempotency_key" do
+      key = SecureRandom.uuid
+      txn = create(:transaction, user: user, idempotency_key: key)
+      expect(txn.reload.idempotency_key).to eq(key)
     end
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_14_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_15_081139) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -18,10 +18,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_14_200000) do
   create_table "transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.decimal "amount", precision: 15, scale: 2, null: false
     t.datetime "created_at", null: false
+    t.string "idempotency_key"
     t.integer "kind", null: false
     t.uuid "recipient_id"
     t.datetime "updated_at", null: false
     t.uuid "user_id", null: false
+    t.index ["idempotency_key"], name: "index_transactions_on_idempotency_key", unique: true
     t.index ["recipient_id"], name: "index_transactions_on_recipient_id"
     t.index ["user_id"], name: "index_transactions_on_user_id"
   end

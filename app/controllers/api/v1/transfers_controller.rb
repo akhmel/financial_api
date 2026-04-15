@@ -7,7 +7,8 @@ module Api
         BalanceService.transfer(
           sender: current_user,
           recipient: recipient,
-          amount: amount_param
+          amount: amount_param,
+          idempotency_key: idempotency_key
         )
 
         render json: {
@@ -26,6 +27,10 @@ module Api
         amount
       rescue ::ArgumentError
         raise BadRequestError, "Invalid amount"
+      end
+
+      def idempotency_key
+        request.headers["Idempotency-Key"]
       end
     end
   end
