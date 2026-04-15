@@ -21,16 +21,7 @@ module Api
       private
 
       def amount_param
-        amount = BigDecimal(params.require(:amount).to_s)
-        raise BadRequestError, "Amount must be positive" unless amount.positive?
-
-        amount
-      rescue ::ArgumentError
-        raise BadRequestError, "Invalid amount"
-      end
-
-      def idempotency_key
-        request.headers["Idempotency-Key"]
+        AmountValidator.parse!(params.require(:amount))
       end
     end
   end
