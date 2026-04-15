@@ -1,4 +1,6 @@
 class BalanceService
+  INTEGER_FORMAT = /\A-?\d+\z/
+
   def self.deposit(user:, amount:, idempotency_key:)
     amount = parse_amount!(amount)
     guard_idempotency!(idempotency_key)
@@ -59,8 +61,6 @@ class BalanceService
   end
   private_class_method :guard_idempotency!
 
-  INTEGER_FORMAT = /\A-?\d+\z/
-
   def self.parse_amount!(value)
     raw = value.to_s
     raise BadRequestError, "Invalid amount format" unless raw.match?(INTEGER_FORMAT)
@@ -69,9 +69,4 @@ class BalanceService
     Money.new(raw.to_i)
   end
   private_class_method :parse_amount!
-
-  def self.log(action, **details)
-    Rails.logger.info("[BalanceService] #{action}: #{details.map { |k, v| "#{k}=#{v}" }.join(' ')}")
-  end
-  private_class_method :log
 end
