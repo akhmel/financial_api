@@ -26,7 +26,6 @@ The API is available at `http://localhost:3000`.
 |--------|------------------------------|------|--------------------------|
 | POST   | `/api/v1/users`              | No   | Create a user            |
 | POST   | `/api/v1/session`            | No   | Log in (get a new token) |
-| GET    | `/api/v1/users/:id`          | Yes  | Get user details         |
 | GET    | `/api/v1/balance`            | Yes  | Check current balance    |
 | POST   | `/api/v1/balance/deposit`    | Yes  | Deposit funds            |
 | POST   | `/api/v1/balance/withdraw`   | Yes  | Withdraw funds           |
