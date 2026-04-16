@@ -1,8 +1,7 @@
 class BalanceService
-  INTEGER_FORMAT = /\A-?\d+\z/
-
   def self.deposit(user:, amount:, idempotency_key:)
-    amount = parse_amount!(amount)
+    amount = MoneyRangeValidator.validate!(amount)
+
     guard_idempotency!(idempotency_key)
 
     ActiveRecord::Base.transaction do
@@ -15,7 +14,8 @@ class BalanceService
   end
 
   def self.withdraw(user:, amount:, idempotency_key:)
-    amount = parse_amount!(amount)
+    amount = MoneyRangeValidator.validate!(amount)
+
     guard_idempotency!(idempotency_key)
 
     ActiveRecord::Base.transaction do
@@ -29,10 +29,11 @@ class BalanceService
   end
 
   def self.transfer(sender:, recipient:, amount:, idempotency_key:)
-    amount = parse_amount!(amount)
-    raise BadRequestError, "Cannot transfer to yourself" if sender.id == recipient.id
+    amount = MoneyRangeValidator.validate!(amount)
 
     guard_idempotency!(idempotency_key)
+
+    raise BadRequestError, "Cannot transfer to yourself" if sender.id == recipient.id
 
     first, second = [ sender, recipient ].sort_by(&:id)
 
@@ -60,13 +61,4 @@ class BalanceService
     raise DuplicateRequestError, "Duplicate request" if Transaction.exists?(idempotency_key: key)
   end
   private_class_method :guard_idempotency!
-
-  def self.parse_amount!(value)
-    raw = value.to_s
-    raise BadRequestError, "Invalid amount format" unless raw.match?(INTEGER_FORMAT)
-    raise BadRequestError, "Amount must be a positive integer (cents)" unless raw.to_i.positive?
-
-    Money.new(raw.to_i)
-  end
-  private_class_method :parse_amount!
 end

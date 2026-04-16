@@ -72,7 +72,7 @@ RSpec.describe "Api::V1::Balances" do
              headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
-        expect(json_response[:error]).to eq("Amount must be a positive integer (cents)")
+        expect(json_response[:error]).to eq("Amount must be greater than or equal to #{MoneyRangeValidator::MIN_VALUE}")
       end
     end
 
@@ -83,7 +83,7 @@ RSpec.describe "Api::V1::Balances" do
              headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
-        expect(json_response[:error]).to eq("Amount must be a positive integer (cents)")
+        expect(json_response[:error]).to eq("Invalid amount format")
       end
     end
 
