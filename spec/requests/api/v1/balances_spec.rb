@@ -108,6 +108,17 @@ RSpec.describe "Api::V1::Balances" do
       end
     end
 
+    context "with malformed JSON body" do
+      it "returns bad request" do
+        post deposit_api_v1_balance_path,
+             params: '{"amount": invalid}',
+             headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json_response[:error]).to eq("Invalid JSON in request body")
+      end
+    end
+
     context "with idempotency key" do
       let(:key) { SecureRandom.uuid }
 

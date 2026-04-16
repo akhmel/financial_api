@@ -9,6 +9,7 @@ module ErrorHandler
     rescue_from BadRequestError, with: :handle_bad_request
     rescue_from ActionController::ParameterMissing, with: :handle_bad_request
     rescue_from DuplicateRequestError, with: :handle_conflict
+    rescue_from ActionDispatch::Http::Parameters::ParseError, with: :handle_parse_error
   end
 
   private
@@ -31,5 +32,9 @@ module ErrorHandler
 
   def handle_conflict(error)
     render json: { error: error.message }, status: :conflict
+  end
+
+  def handle_parse_error(_error)
+    render json: { error: "Invalid JSON in request body" }, status: :bad_request
   end
 end
