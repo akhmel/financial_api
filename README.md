@@ -45,12 +45,11 @@ Response (`201 Created`):
 
 ```json
 {
-  "user": { "id": "a1b2c3d4-...", "email": "alice@example.com", "balance": 0 },
-  "token": "eyJhbGciOiJIUzI1NiJ9..."
+  "user": { "id": "a1b2c3d4-...", "email": "alice@example.com" }
 }
 ```
 
-Save the `token` value — it is used for all authenticated requests.
+Use the session endpoint below to obtain a JWT token for authenticated requests.
 
 ### 2. Log in (create session)
 
@@ -81,7 +80,7 @@ Response (`200 OK`):
 
 ### 4. Deposit / Withdraw funds
 
-All amounts are in **cents** (integer). For example, `100000` = $1,000.00.
+All amounts are in **cents** (integer). For example, `100000` = $1,000.00. Minimum amount is **100** cents ($1.00), maximum is **10,000,000,000** cents ($100M).
 
 Every mutation request (deposit, withdraw, transfer) **requires** an `Idempotency-Key` header (any unique string, e.g. a UUID). The server rejects duplicate requests with `409 Conflict`, guaranteeing each operation is applied exactly once even on network retries.
 

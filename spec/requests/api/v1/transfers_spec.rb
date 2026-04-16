@@ -99,7 +99,7 @@ RSpec.describe "Api::V1::Transfers" do
              headers: auth_headers(sender).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
-        expect(json_response[:error]).to eq("Amount must be greater than or equal to #{MoneyRangeValidator::MIN_VALUE}")
+        expect(json_response[:error]).to eq("Amount must be greater than or equal to #{MoneyValidator::MIN_VALUE}")
       end
     end
 
@@ -130,6 +130,17 @@ RSpec.describe "Api::V1::Transfers" do
              headers: auth_headers(sender).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
+      end
+    end
+
+    context "with too high amount" do
+      it "returns bad request" do
+        post api_v1_transfers_path,
+             params: { recipient_id: recipient.id, amount: (MoneyValidator::MAX_VALUE + 1).to_s }.to_json,
+             headers: auth_headers(sender).merge("Idempotency-Key" => SecureRandom.uuid)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json_response[:error]).to eq("Amount must be less than or equal to #{MoneyValidator::MAX_VALUE}")
       end
     end
 

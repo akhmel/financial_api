@@ -1,6 +1,6 @@
 class BalanceService
   def self.deposit(user:, amount:, idempotency_key:)
-    amount = MoneyRangeValidator.validate!(amount)
+    amount = MoneyValidator.parse!(amount)
 
     guard_idempotency!(idempotency_key)
 
@@ -14,7 +14,7 @@ class BalanceService
   end
 
   def self.withdraw(user:, amount:, idempotency_key:)
-    amount = MoneyRangeValidator.validate!(amount)
+    amount = MoneyValidator.parse!(amount)
 
     guard_idempotency!(idempotency_key)
 
@@ -29,11 +29,11 @@ class BalanceService
   end
 
   def self.transfer(sender:, recipient:, amount:, idempotency_key:)
-    amount = MoneyRangeValidator.validate!(amount)
-
-    guard_idempotency!(idempotency_key)
+    amount = MoneyValidator.parse!(amount)
 
     raise BadRequestError, "Cannot transfer to yourself" if sender.id == recipient.id
+
+    guard_idempotency!(idempotency_key)
 
     first, second = [ sender, recipient ].sort_by(&:id)
 
