@@ -9,11 +9,7 @@ module Api
           idempotency_key: idempotency_key
         )
 
-        render json: {
-          sender: { email: result[:sender].email, balance: result[:sender].balance_cents },
-          recipient: { email: result[:recipient].email },
-          amount: result[:transaction].amount_cents
-        }, status: :created
+        render json: TransferSerializer.new(**result), status: :created
       end
     end
   end

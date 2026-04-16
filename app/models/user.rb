@@ -1,4 +1,6 @@
 class User < ApplicationRecord
+  include Monetizable
+
   has_secure_password
 
   has_many :transactions, dependent: :destroy
@@ -10,6 +12,7 @@ class User < ApplicationRecord
   validates :password, length: { minimum: 12 }, if: :password_digest_changed?
 
   monetize :balance_cents, numericality: { greater_than_or_equal_to: 0 }
+  money_as_decimal :balance
 
   before_save :downcase_email
 

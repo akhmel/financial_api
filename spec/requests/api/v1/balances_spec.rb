@@ -5,12 +5,12 @@ RSpec.describe "Api::V1::Balances" do
 
   describe "GET /api/v1/balance" do
     context "when authenticated" do
-      it "returns the current balance in cents" do
+      it "returns the current balance" do
         get api_v1_balance_path, headers: auth_headers(user)
 
         expect(response).to have_http_status(:ok)
         expect(json_response[:email]).to eq(user.email)
-        expect(json_response[:balance]).to eq(50_000)
+        expect(json_response[:balance]).to eq(500.0)
       end
     end
 
@@ -42,7 +42,7 @@ RSpec.describe "Api::V1::Balances" do
              headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:ok)
-        expect(json_response[:balance]).to eq(70_000)
+        expect(json_response[:balance]).to eq(700.0)
       end
 
       it "creates a deposit transaction" do
@@ -57,19 +57,28 @@ RSpec.describe "Api::V1::Balances" do
       end
     end
 
-    context "with non-integer amount" do
-      it "rejects decimal values" do
+    context "with decimal amount" do
+      it "converts to cents and deposits" do
         post deposit_api_v1_balance_path,
-             params: { amount: "99.99" }.to_json,
+             params: { amount: "200.50" }.to_json,
+             headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
+
+        expect(response).to have_http_status(:ok)
+        expect(json_response[:balance]).to eq(700.5)
+      end
+
+      it "rejects more than 2 decimal places" do
+        post deposit_api_v1_balance_path,
+             params: { amount: "100.001" }.to_json,
              headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
-        expect(json_response[:error]).to eq("Invalid amount format")
+        expect(json_response[:error]).to eq("Amount cannot have more than 2 decimal places")
       end
 
-      it "does not change the balance" do
+      it "does not change the balance with invalid decimals" do
         post deposit_api_v1_balance_path,
-             params: { amount: "100.50" }.to_json,
+             params: { amount: "100.999" }.to_json,
              headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(user.reload.balance_cents).to eq(50_000)
@@ -128,7 +137,7 @@ RSpec.describe "Api::V1::Balances" do
              headers: auth_headers(user).merge("Idempotency-Key" => key)
 
         expect(response).to have_http_status(:ok)
-        expect(json_response[:balance]).to eq(70_000)
+        expect(json_response[:balance]).to eq(700.0)
       end
 
       it "rejects a duplicate request with the same key" do
@@ -195,7 +204,7 @@ RSpec.describe "Api::V1::Balances" do
              headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:ok)
-        expect(json_response[:balance]).to eq(30_000)
+        expect(json_response[:balance]).to eq(300.0)
       end
 
       it "creates a withdraw transaction" do
@@ -216,7 +225,7 @@ RSpec.describe "Api::V1::Balances" do
              headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:ok)
-        expect(json_response[:balance]).to eq(0)
+        expect(json_response[:balance]).to eq(0.0)
       end
     end
 
@@ -258,7 +267,7 @@ RSpec.describe "Api::V1::Balances" do
              headers: auth_headers(user).merge("Idempotency-Key" => key)
 
         expect(response).to have_http_status(:ok)
-        expect(json_response[:balance]).to eq(40_000)
+        expect(json_response[:balance]).to eq(400.0)
 
         post withdraw_api_v1_balance_path,
              params: { amount: 10_000 }.to_json,
@@ -280,19 +289,28 @@ RSpec.describe "Api::V1::Balances" do
       end
     end
 
-    context "with non-integer amount" do
-      it "rejects decimal values" do
+    context "with decimal amount" do
+      it "converts to cents and withdraws" do
         post withdraw_api_v1_balance_path,
-             params: { amount: "0.50" }.to_json,
+             params: { amount: "200.50" }.to_json,
+             headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
+
+        expect(response).to have_http_status(:ok)
+        expect(json_response[:balance]).to eq(299.5)
+      end
+
+      it "rejects more than 2 decimal places" do
+        post withdraw_api_v1_balance_path,
+             params: { amount: "100.001" }.to_json,
              headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
-        expect(json_response[:error]).to eq("Invalid amount format")
+        expect(json_response[:error]).to eq("Amount cannot have more than 2 decimal places")
       end
 
-      it "does not change the balance" do
+      it "does not change the balance with invalid decimals" do
         post withdraw_api_v1_balance_path,
-             params: { amount: "100.001" }.to_json,
+             params: { amount: "100.999" }.to_json,
              headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(user.reload.balance_cents).to eq(50_000)

@@ -15,10 +15,10 @@ RSpec.describe "Api::V1::Transfers" do
 
         expect(response).to have_http_status(:created)
         expect(json_response[:sender][:email]).to eq(sender.email)
-        expect(json_response[:sender][:balance]).to eq(70_000)
+        expect(json_response[:sender][:balance]).to eq(700.0)
         expect(json_response[:recipient][:email]).to eq(recipient.email)
         expect(json_response[:recipient][:balance]).to be_nil
-        expect(json_response[:amount]).to eq(30_000)
+        expect(json_response[:amount]).to eq(300.0)
       end
 
       it "debits the sender" do
@@ -104,17 +104,27 @@ RSpec.describe "Api::V1::Transfers" do
       end
     end
 
-    context "with non-integer amount" do
-      it "rejects decimal values" do
+    context "with decimal amount" do
+      it "converts to cents and transfers" do
         post api_v1_transfers_path,
-             params: { recipient_email: recipient.email, amount: "0.50" }.to_json,
+             params: { recipient_email: recipient.email, amount: "300.00" }.to_json,
+             headers: auth_headers(sender).merge("Idempotency-Key" => SecureRandom.uuid)
+
+        expect(response).to have_http_status(:created)
+        expect(sender.reload.balance_cents).to eq(70_000)
+        expect(recipient.reload.balance_cents).to eq(50_000)
+      end
+
+      it "rejects more than 2 decimal places" do
+        post api_v1_transfers_path,
+             params: { recipient_email: recipient.email, amount: "100.999" }.to_json,
              headers: auth_headers(sender).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
-        expect(json_response[:error]).to eq("Invalid amount format")
+        expect(json_response[:error]).to eq("Amount cannot have more than 2 decimal places")
       end
 
-      it "does not change either balance" do
+      it "does not change either balance with invalid decimals" do
         post api_v1_transfers_path,
              params: { recipient_email: recipient.email, amount: "100.999" }.to_json,
              headers: auth_headers(sender).merge("Idempotency-Key" => SecureRandom.uuid)

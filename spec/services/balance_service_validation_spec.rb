@@ -27,8 +27,12 @@ RSpec.describe BalanceService do
     end
 
     context "with invalid format" do
-      it "rejects decimal values" do
-        expect { deposit("99.99") }.to raise_error(BadRequestError, "Invalid amount format")
+      it "accepts valid decimal values by converting to cents" do
+        expect { deposit("9.99") }.not_to raise_error
+      end
+
+      it "rejects more than 2 decimal places" do
+        expect { deposit("99.999") }.to raise_error(BadRequestError, "Amount cannot have more than 2 decimal places")
       end
 
       it "rejects alphabetic strings" do

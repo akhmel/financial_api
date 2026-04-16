@@ -73,12 +73,12 @@ curl http://localhost:3000/api/v1/balance \
 Response (`200 OK`):
 
 ```json
-{ "email": "alice@example.com", "balance": 0 }
+{ "email": "alice@example.com", "balance": 0.0 }
 ```
 
 ### 4. Deposit / Withdraw funds
 
-All amounts are in **cents** (integer). For example, `100000` = $1,000.00. Minimum amount is **100** cents ($1.00), maximum is **10,000,000,000** cents ($100M).
+All **input** amounts are in **cents** (integer). For example, `100000` = $1,000.00. Minimum amount is **100** cents ($1.00), maximum is **10,000,000,000** cents ($100M). All **response** amounts are returned as **decimals** (dollars).
 
 Every mutation request (deposit, withdraw, transfer) **requires** an `Idempotency-Key` header (any unique string, e.g. a UUID). The server rejects duplicate requests with `409 Conflict`, guaranteeing each operation is applied exactly once even on network retries.
 
@@ -105,7 +105,7 @@ curl -X POST http://localhost:3000/api/v1/balance/withdraw \
 Response (`200 OK`):
 
 ```json
-{ "email": "alice@example.com", "balance": 80000 }
+{ "email": "alice@example.com", "balance": 800.0 }
 ```
 
 ### 5. Transfer funds between users
@@ -124,8 +124,8 @@ Response (`201 Created`):
 
 ```json
 {
-  "sender": { "email": "alice@example.com", "balance": 50000 },
+  "sender": { "email": "alice@example.com", "balance": 500.0 },
   "recipient": { "email": "bob@example.com" },
-  "amount": 30000
+  "amount": 300.0
 }
 ```

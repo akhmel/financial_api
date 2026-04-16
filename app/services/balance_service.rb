@@ -1,11 +1,11 @@
 class BalanceService
-  FORMAT = /\A\d+\z/
-  MIN_VALUE = 100 # $1.00
-  MAX_VALUE = 10_000_000_000 # $100M — adjustable via config if business requires
+  DECIMAL_FORMAT = /\A\d+\.\d{1,2}\z/
+  MIN_VALUE = Money.new(100) # $1.00
+  MAX_VALUE = Money.new(10_000_000_000) # $100M — adjustable via config if business requires
 
   def self.deposit(user_id:, amount:, idempotency_key:)
     validate!(amount)
-    amount = parse(amount)
+    amount = normalize(amount)
 
     ActiveRecord::Base.transaction do
       guard_idempotency!(idempotency_key)
@@ -18,7 +18,7 @@ class BalanceService
 
   def self.withdraw(user_id:, amount:, idempotency_key:)
     validate!(amount)
-    amount = parse(amount)
+    amount = normalize(amount)
 
     ActiveRecord::Base.transaction do
       guard_idempotency!(idempotency_key)
@@ -33,8 +33,8 @@ class BalanceService
 
   def self.transfer(sender_id:, recipient_email:, amount:, idempotency_key:)
     validate!(amount)
-    amount = parse(amount)
-
+    amount = normalize(amount)
+    
     recipient_id = User.find_by!(email: recipient_email.downcase).id
     raise BadRequestError, "Cannot transfer to yourself" if sender_id == recipient_id
 
@@ -62,16 +62,16 @@ class BalanceService
       raise DuplicateRequestError, "Duplicate request" if Transaction.exists?(idempotency_key: key)
     end
 
-    def validate!(value)
-      raise BadRequestError, "Invalid amount format" unless value.to_s.match?(FORMAT)
-
-      cents = value.to_i
-      raise BadRequestError, "Amount must be greater than or equal to #{MIN_VALUE}" unless cents >= MIN_VALUE
-      raise BadRequestError, "Amount must be less than or equal to #{MAX_VALUE}" unless cents <= MAX_VALUE
+    def normalize(value)
+      Money.new((BigDecimal(value.to_s) * 100).to_i.to_s)
     end
 
-    def parse(value)
-      Money.new(value)
+    def validate!(value)
+      raise BadRequestError, "Invalid amount format" unless value.to_s.match?(DECIMAL_FORMAT)
+
+      value = normalize(value)
+      raise BadRequestError, "Amount must be greater than or equal to #{MIN_VALUE}" unless value >= MIN_VALUE
+      raise BadRequestError, "Amount must be less than or equal to #{MAX_VALUE}" unless value <= MAX_VALUE
     end
   end
 end
