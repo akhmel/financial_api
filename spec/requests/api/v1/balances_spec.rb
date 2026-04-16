@@ -24,7 +24,6 @@ RSpec.describe "Api::V1::Balances" do
   end
 
   describe "POST /api/v1/balance/deposit" do
-
     context "with too high amount" do
       it "returns bad request" do
         post deposit_api_v1_balance_path,
@@ -230,7 +229,6 @@ RSpec.describe "Api::V1::Balances" do
     end
 
     context "with too high amount" do
-
       it "returns bad request" do
         post withdraw_api_v1_balance_path,
              params: { amount: (MoneyValidator::MAX_VALUE + 1).to_s }.to_json,
@@ -239,7 +237,7 @@ RSpec.describe "Api::V1::Balances" do
         expect(response).to have_http_status(:bad_request)
       end
     end
-    
+
     context "with idempotency key" do
       let(:key) { SecureRandom.uuid }
 

@@ -6,7 +6,7 @@ RSpec.describe "Api::V1::Transfers" do
 
   describe "POST /api/v1/transfers" do
     context "with valid params and sufficient funds" do
-      let(:params) { { recipient_id: recipient.id, amount: 30_000 } }
+      let(:params) { { recipient_email: recipient.email, amount: 30_000 } }
 
       it "returns created with transfer details" do
         post api_v1_transfers_path,
@@ -14,9 +14,10 @@ RSpec.describe "Api::V1::Transfers" do
              headers: auth_headers(sender).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:created)
-        expect(json_response[:sender][:id]).to eq(sender.id)
+        expect(json_response[:sender][:email]).to eq(sender.email)
         expect(json_response[:sender][:balance]).to eq(70_000)
-        expect(json_response[:recipient][:id]).to eq(recipient.id)
+        expect(json_response[:recipient][:email]).to eq(recipient.email)
+        expect(json_response[:recipient][:balance]).to eq(50_000)
         expect(json_response[:amount]).to eq(30_000)
       end
 
@@ -54,7 +55,7 @@ RSpec.describe "Api::V1::Transfers" do
     context "with insufficient funds" do
       it "returns unprocessable entity" do
         post api_v1_transfers_path,
-             params: { recipient_id: recipient.id, amount: 500_000 }.to_json,
+             params: { recipient_email: recipient.email, amount: 500_000 }.to_json,
              headers: auth_headers(sender).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:unprocessable_content)
@@ -63,7 +64,7 @@ RSpec.describe "Api::V1::Transfers" do
 
       it "does not change either balance" do
         post api_v1_transfers_path,
-             params: { recipient_id: recipient.id, amount: 500_000 }.to_json,
+             params: { recipient_email: recipient.email, amount: 500_000 }.to_json,
              headers: auth_headers(sender).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(sender.reload.balance_cents).to eq(100_000)
@@ -74,7 +75,7 @@ RSpec.describe "Api::V1::Transfers" do
     context "when transferring to yourself" do
       it "returns bad request" do
         post api_v1_transfers_path,
-             params: { recipient_id: sender.id, amount: 10_000 }.to_json,
+             params: { recipient_email: sender.email, amount: 10_000 }.to_json,
              headers: auth_headers(sender).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
@@ -85,7 +86,7 @@ RSpec.describe "Api::V1::Transfers" do
     context "when recipient does not exist" do
       it "returns not found" do
         post api_v1_transfers_path,
-             params: { recipient_id: "00000000-0000-0000-0000-000000000000", amount: 10_000 }.to_json,
+             params: { recipient_email: "nobody@example.com", amount: 10_000 }.to_json,
              headers: auth_headers(sender).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:not_found)
@@ -95,7 +96,7 @@ RSpec.describe "Api::V1::Transfers" do
     context "with zero amount" do
       it "returns bad request" do
         post api_v1_transfers_path,
-             params: { recipient_id: recipient.id, amount: 0 }.to_json,
+             params: { recipient_email: recipient.email, amount: 0 }.to_json,
              headers: auth_headers(sender).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
@@ -106,7 +107,7 @@ RSpec.describe "Api::V1::Transfers" do
     context "with non-integer amount" do
       it "rejects decimal values" do
         post api_v1_transfers_path,
-             params: { recipient_id: recipient.id, amount: "0.50" }.to_json,
+             params: { recipient_email: recipient.email, amount: "0.50" }.to_json,
              headers: auth_headers(sender).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
@@ -115,7 +116,7 @@ RSpec.describe "Api::V1::Transfers" do
 
       it "does not change either balance" do
         post api_v1_transfers_path,
-             params: { recipient_id: recipient.id, amount: "100.999" }.to_json,
+             params: { recipient_email: recipient.email, amount: "100.999" }.to_json,
              headers: auth_headers(sender).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(sender.reload.balance_cents).to eq(100_000)
@@ -126,7 +127,7 @@ RSpec.describe "Api::V1::Transfers" do
     context "with negative amount" do
       it "returns bad request" do
         post api_v1_transfers_path,
-             params: { recipient_id: recipient.id, amount: -100 }.to_json,
+             params: { recipient_email: recipient.email, amount: -100 }.to_json,
              headers: auth_headers(sender).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
@@ -136,7 +137,7 @@ RSpec.describe "Api::V1::Transfers" do
     context "with too high amount" do
       it "returns bad request" do
         post api_v1_transfers_path,
-             params: { recipient_id: recipient.id, amount: (MoneyValidator::MAX_VALUE + 1).to_s }.to_json,
+             params: { recipient_email: recipient.email, amount: (MoneyValidator::MAX_VALUE + 1).to_s }.to_json,
              headers: auth_headers(sender).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
@@ -144,7 +145,7 @@ RSpec.describe "Api::V1::Transfers" do
       end
     end
 
-    context "without recipient_id" do
+    context "without recipient_email" do
       it "returns bad request" do
         post api_v1_transfers_path,
              params: { amount: 10_000 }.to_json,
@@ -157,7 +158,7 @@ RSpec.describe "Api::V1::Transfers" do
     context "without authentication" do
       it "returns unauthorized" do
         post api_v1_transfers_path,
-             params: { recipient_id: recipient.id, amount: 10_000 }.to_json,
+             params: { recipient_email: recipient.email, amount: 10_000 }.to_json,
              headers: json_headers
 
         expect(response).to have_http_status(:unauthorized)
@@ -167,7 +168,7 @@ RSpec.describe "Api::V1::Transfers" do
     context "without idempotency key" do
       it "returns bad request" do
         post api_v1_transfers_path,
-             params: { recipient_id: recipient.id, amount: 10_000 }.to_json,
+             params: { recipient_email: recipient.email, amount: 10_000 }.to_json,
              headers: auth_headers(sender)
 
         expect(response).to have_http_status(:bad_request)
@@ -176,7 +177,7 @@ RSpec.describe "Api::V1::Transfers" do
 
       it "does not change either balance" do
         post api_v1_transfers_path,
-             params: { recipient_id: recipient.id, amount: 10_000 }.to_json,
+             params: { recipient_email: recipient.email, amount: 10_000 }.to_json,
              headers: auth_headers(sender)
 
         expect(sender.reload.balance_cents).to eq(100_000)
@@ -186,7 +187,7 @@ RSpec.describe "Api::V1::Transfers" do
 
     context "with idempotency key" do
       let(:key) { SecureRandom.uuid }
-      let(:params) { { recipient_id: recipient.id, amount: 30_000 } }
+      let(:params) { { recipient_email: recipient.email, amount: 30_000 } }
 
       it "processes the first transfer normally" do
         post api_v1_transfers_path,

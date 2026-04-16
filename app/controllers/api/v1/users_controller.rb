@@ -10,6 +10,12 @@ module Api
         render json: { user: user_response(user) }, status: :created
       end
 
+      def show
+        raise AuthenticationError, "Forbidden" unless params[:id] == current_user.id
+
+        render json: { user: user_response(current_user) }
+      end
+
       private
 
       def user_params

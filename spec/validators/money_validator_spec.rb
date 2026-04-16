@@ -52,6 +52,22 @@ RSpec.describe MoneyValidator do
       it "rejects strings with special characters" do
         expect { described_class.validate!("1_000") }.to raise_error(BadRequestError, "Invalid amount format")
       end
+
+      it "rejects comma-separated amounts" do
+        expect { described_class.validate!("1,000") }.to raise_error(BadRequestError, "Invalid amount format")
+      end
+
+      it "rejects comma as decimal separator" do
+        expect { described_class.validate!("100,50") }.to raise_error(BadRequestError, "Invalid amount format")
+      end
+
+      it "rejects alphanumeric mix" do
+        expect { described_class.validate!("100abc") }.to raise_error(BadRequestError, "Invalid amount format")
+      end
+
+      it "rejects currency symbols" do
+        expect { described_class.validate!("$100") }.to raise_error(BadRequestError, "Invalid amount format")
+      end
     end
 
     context "with amounts below minimum" do

@@ -112,22 +112,22 @@ Response (`200 OK`):
 
 ### 5. Transfer funds between users
 
-First create a second user and note their `id`. Then transfer from the authenticated user:
+First create a second user. Then transfer from the authenticated user using the recipient's email:
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/transfers \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <SENDER_TOKEN>" \
   -H "Idempotency-Key: $(uuidgen)" \
-  -d '{"recipient_id": "<RECIPIENT_UUID>", "amount": 30000}'
+  -d '{"recipient_email": "bob@example.com", "amount": 30000}'
 ```
 
 Response (`201 Created`):
 
 ```json
 {
-  "sender": { "id": "a1b2c3d4-...", "balance": 50000 },
-  "recipient": { "id": "e5f6a7b8-..." },
+  "sender": { "email": "alice@example.com", "balance": 50000 },
+  "recipient": { "email": "bob@example.com", "balance": 50000 },
   "amount": 30000
 }
 ```

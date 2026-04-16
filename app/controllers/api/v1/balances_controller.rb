@@ -6,15 +6,15 @@ module Api
       end
 
       def deposit
-        BalanceService.deposit(user: current_user, amount: params.require(:amount), idempotency_key: idempotency_key)
+        user = BalanceService.deposit(user_id: current_user.id, amount: params.require(:amount), idempotency_key: idempotency_key)
 
-        render json: { user_id: current_user.id, balance: current_user.balance_cents }
+        render json: { email: user.email, balance: user.balance_cents }
       end
 
       def withdraw
-        BalanceService.withdraw(user: current_user, amount: params.require(:amount), idempotency_key: idempotency_key)
+        user = BalanceService.withdraw(user_id: current_user.id, amount: params.require(:amount), idempotency_key: idempotency_key)
 
-        render json: { user_id: current_user.id, balance: current_user.balance_cents }
+        render json: { email: user.email, balance: user.balance_cents }
       end
     end
   end
