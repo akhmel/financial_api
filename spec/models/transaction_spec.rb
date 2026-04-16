@@ -19,13 +19,19 @@ RSpec.describe Transaction do
     end
 
     context "idempotency_key" do
+      it "requires idempotency_key" do
+        txn = build(:transaction, idempotency_key: nil)
+        expect(txn).not_to be_valid
+        expect(txn.errors[:idempotency_key]).to include("can't be blank")
+      end
+
       it "allows unique idempotency_key" do
-        txn = build(:transaction, :with_idempotency_key)
+        txn = build(:transaction)
         expect(txn).to be_valid
       end
 
       it "rejects duplicate idempotency_key" do
-        existing = create(:transaction, :with_idempotency_key)
+        existing = create(:transaction)
         duplicate = build(:transaction, idempotency_key: existing.idempotency_key)
         expect(duplicate).not_to be_valid
         expect(duplicate.errors[:idempotency_key]).to include("has already been taken")

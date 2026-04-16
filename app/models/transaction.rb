@@ -6,5 +6,5 @@ class Transaction < ApplicationRecord
 
   monetize :amount_cents, numericality: { greater_than: 0 }
   validates :kind, presence: true
-  validates :idempotency_key, uniqueness: true, allow_nil: false
+  validates :idempotency_key, presence: true, uniqueness: true
 end
