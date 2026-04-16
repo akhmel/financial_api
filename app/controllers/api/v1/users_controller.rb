@@ -5,8 +5,6 @@ module Api
 
       def create
         user = User.create!(user_params)
-        token = JwtService.encode({ user_id: user.id })
-
         render json: { email: user.email }, status: :created
       end
 

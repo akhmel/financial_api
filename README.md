@@ -125,7 +125,7 @@ Response (`201 Created`):
 ```json
 {
   "sender": { "email": "alice@example.com", "balance": 50000 },
-  "recipient": { "email": "bob@example.com", "balance": 50000 },
+  "recipient": { "email": "bob@example.com" },
   "amount": 30000
 }
 ```
