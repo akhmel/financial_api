@@ -61,16 +61,16 @@ class BalanceService
       raise BadRequestError, "Idempotency-Key header is required" if key.blank?
       raise DuplicateRequestError, "Duplicate request" if Transaction.exists?(idempotency_key: key)
     end
-  
+
     def validate!(value)
       raise BadRequestError, "Invalid amount format" unless value.to_s.match?(FORMAT)
-  
+
       cents = value.to_i
       raise BadRequestError, "Amount must be greater than or equal to #{MIN_VALUE}" unless cents >= MIN_VALUE
       raise BadRequestError, "Amount must be less than or equal to #{MAX_VALUE}" unless cents <= MAX_VALUE
       cents
     end
-  
+
     def parse(value)
       Money.new(value)
     end

@@ -79,7 +79,7 @@ RSpec.describe "BalanceService.transfer race conditions" do
       initial_total = User.sum(:balance_cents)
 
       barrier = Concurrent::CyclicBarrier.new(4)
-      pairs = [[0, 1], [1, 2], [2, 3], [3, 0]]
+      pairs = [ [ 0, 1 ], [ 1, 2 ], [ 2, 3 ], [ 3, 0 ] ]
       threads = pairs.map do |(s, r)|
         transfer_async(
           barrier,
