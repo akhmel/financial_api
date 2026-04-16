@@ -7,9 +7,8 @@ class BalanceService
     validate!(amount)
     amount = parse(amount)
 
-    guard_idempotency!(idempotency_key)
-
     ActiveRecord::Base.transaction do
+      guard_idempotency!(idempotency_key)
       user = User.lock.find(user_id)
       user.update!(balance: user.balance + amount)
       user.transactions.create!(kind: :deposit, amount: amount, idempotency_key: idempotency_key)
@@ -21,9 +20,8 @@ class BalanceService
     validate!(amount)
     amount = parse(amount)
 
-    guard_idempotency!(idempotency_key)
-
     ActiveRecord::Base.transaction do
+      guard_idempotency!(idempotency_key)
       user = User.lock.find(user_id)
       raise InsufficientFundsError, "Insufficient funds" unless user.sufficient_funds?(amount)
 
@@ -40,9 +38,8 @@ class BalanceService
     recipient_id = User.find_by!(email: recipient_email.downcase).id
     raise BadRequestError, "Cannot transfer to yourself" if sender_id == recipient_id
 
-    guard_idempotency!(idempotency_key)
-
     ActiveRecord::Base.transaction(isolation: :repeatable_read) do
+      guard_idempotency!(idempotency_key)
       sender, recipient = User.lock.where(id: [ sender_id, recipient_id ]).order(:id).to_a
       sender, recipient = [ recipient, sender ] if sender.id != sender_id
 
@@ -51,9 +48,9 @@ class BalanceService
       sender.update!(balance: sender.balance - amount)
       recipient.update!(balance: recipient.balance + amount)
 
-      sender.transactions.create!(kind: :transfer, amount: amount, recipient: recipient, idempotency_key: idempotency_key)
+      transaction = sender.transactions.create!(kind: :transfer, amount: amount, recipient: recipient, idempotency_key: idempotency_key)
 
-      { sender: sender, recipient: recipient }
+      { sender: sender, recipient: recipient, transaction: transaction }
     end
   end
 

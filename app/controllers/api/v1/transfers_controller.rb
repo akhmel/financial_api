@@ -12,7 +12,7 @@ module Api
         render json: {
           sender: { email: result[:sender].email, balance: result[:sender].balance_cents },
           recipient: { email: result[:recipient].email, balance: result[:recipient].balance_cents },
-          amount: result[:sender].transactions.last.amount_cents
+          amount: result[:transaction].amount_cents
         }, status: :created
       end
     end

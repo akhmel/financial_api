@@ -19,11 +19,6 @@ RSpec.describe Transaction do
     end
 
     context "idempotency_key" do
-      it "allows nil idempotency_key" do
-        txn = build(:transaction, idempotency_key: nil)
-        expect(txn).to be_valid
-      end
-
       it "allows unique idempotency_key" do
         txn = build(:transaction, :with_idempotency_key)
         expect(txn).to be_valid
@@ -34,12 +29,6 @@ RSpec.describe Transaction do
         duplicate = build(:transaction, idempotency_key: existing.idempotency_key)
         expect(duplicate).not_to be_valid
         expect(duplicate.errors[:idempotency_key]).to include("has already been taken")
-      end
-
-      it "allows multiple nil idempotency_keys" do
-        create(:transaction, idempotency_key: nil)
-        txn = build(:transaction, idempotency_key: nil)
-        expect(txn).to be_valid
       end
     end
   end
