@@ -1,6 +1,11 @@
 class BalanceService
+  FORMAT = /\A\d+\z/
+  MIN_VALUE = 100 # $1.00
+  MAX_VALUE = 10_000_000_000 # $100M — adjustable via config if business requires
+
   def self.deposit(user_id:, amount:, idempotency_key:)
-    amount = MoneyValidator.parse!(amount)
+    validate!(amount)
+    amount = parse(amount)
 
     guard_idempotency!(idempotency_key)
 
@@ -13,7 +18,8 @@ class BalanceService
   end
 
   def self.withdraw(user_id:, amount:, idempotency_key:)
-    amount = MoneyValidator.parse!(amount)
+    validate!(amount)
+    amount = parse(amount)
 
     guard_idempotency!(idempotency_key)
 
@@ -28,7 +34,8 @@ class BalanceService
   end
 
   def self.transfer(sender_id:, recipient_email:, amount:, idempotency_key:)
-    amount = MoneyValidator.parse!(amount)
+    validate!(amount)
+    amount = parse(amount)
 
     recipient_id = User.find_by!(email: recipient_email.downcase).id
     raise BadRequestError, "Cannot transfer to yourself" if sender_id == recipient_id
@@ -50,9 +57,25 @@ class BalanceService
     end
   end
 
-  def self.guard_idempotency!(key)
-    raise BadRequestError, "Idempotency-Key header is required" if key.blank?
-    raise DuplicateRequestError, "Duplicate request" if Transaction.exists?(idempotency_key: key)
+  class << self
+    private
+
+    def guard_idempotency!(key)
+      raise BadRequestError, "Idempotency-Key header is required" if key.blank?
+      raise DuplicateRequestError, "Duplicate request" if Transaction.exists?(idempotency_key: key)
+    end
+  
+    def validate!(value)
+      raise BadRequestError, "Invalid amount format" unless value.to_s.match?(FORMAT)
+  
+      cents = value.to_i
+      raise BadRequestError, "Amount must be greater than or equal to #{MIN_VALUE}" unless cents >= MIN_VALUE
+      raise BadRequestError, "Amount must be less than or equal to #{MAX_VALUE}" unless cents <= MAX_VALUE
+      cents
+    end
+  
+    def parse(value)
+      Money.new(value)
+    end
   end
-  private_class_method :guard_idempotency!
 end

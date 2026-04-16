@@ -2,7 +2,7 @@ module Api
   module V1
     class BalancesController < ApplicationController
       def show
-        render json: { user_id: current_user.id, balance: current_user.balance_cents }
+        render json: { email: current_user.email, balance: current_user.balance_cents }
       end
 
       def deposit

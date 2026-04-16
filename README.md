@@ -44,9 +44,7 @@ curl -X POST http://localhost:3000/api/v1/users \
 Response (`201 Created`):
 
 ```json
-{
-  "user": { "id": "a1b2c3d4-...", "email": "alice@example.com" }
-}
+{ "email": "alice@example.com" }
 ```
 
 Use the session endpoint below to obtain a JWT token for authenticated requests.
@@ -75,7 +73,7 @@ curl http://localhost:3000/api/v1/balance \
 Response (`200 OK`):
 
 ```json
-{ "user_id": "a1b2c3d4-...", "balance": 0 }
+{ "email": "alice@example.com", "balance": 0 }
 ```
 
 ### 4. Deposit / Withdraw funds
@@ -107,7 +105,7 @@ curl -X POST http://localhost:3000/api/v1/balance/withdraw \
 Response (`200 OK`):
 
 ```json
-{ "user_id": "a1b2c3d4-...", "balance": 80000 }
+{ "email": "alice@example.com", "balance": 80000 }
 ```
 
 ### 5. Transfer funds between users

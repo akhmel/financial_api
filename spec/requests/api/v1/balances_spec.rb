@@ -9,7 +9,7 @@ RSpec.describe "Api::V1::Balances" do
         get api_v1_balance_path, headers: auth_headers(user)
 
         expect(response).to have_http_status(:ok)
-        expect(json_response[:user_id]).to eq(user.id)
+        expect(json_response[:email]).to eq(user.email)
         expect(json_response[:balance]).to eq(50_000)
       end
     end
@@ -27,11 +27,11 @@ RSpec.describe "Api::V1::Balances" do
     context "with too high amount" do
       it "returns bad request" do
         post deposit_api_v1_balance_path,
-             params: { amount: (MoneyValidator::MAX_VALUE + 1).to_s }.to_json,
+             params: { amount: (BalanceService::MAX_VALUE + 1).to_s }.to_json,
              headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
-        expect(json_response[:error]).to eq("Amount must be less than or equal to #{MoneyValidator::MAX_VALUE}")
+        expect(json_response[:error]).to eq("Amount must be less than or equal to #{BalanceService::MAX_VALUE}")
       end
     end
 
@@ -83,7 +83,7 @@ RSpec.describe "Api::V1::Balances" do
              headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)
-        expect(json_response[:error]).to eq("Amount must be greater than or equal to #{MoneyValidator::MIN_VALUE}")
+        expect(json_response[:error]).to eq("Amount must be greater than or equal to #{BalanceService::MIN_VALUE}")
       end
     end
 
@@ -231,7 +231,7 @@ RSpec.describe "Api::V1::Balances" do
     context "with too high amount" do
       it "returns bad request" do
         post withdraw_api_v1_balance_path,
-             params: { amount: (MoneyValidator::MAX_VALUE + 1).to_s }.to_json,
+             params: { amount: (BalanceService::MAX_VALUE + 1).to_s }.to_json,
              headers: auth_headers(user).merge("Idempotency-Key" => SecureRandom.uuid)
 
         expect(response).to have_http_status(:bad_request)

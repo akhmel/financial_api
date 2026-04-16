@@ -9,8 +9,7 @@ RSpec.describe "Api::V1::Users" do
         post api_v1_users_path, params: valid_params.to_json, headers: json_headers
 
         expect(response).to have_http_status(:created)
-        expect(json_response[:user][:id]).to be_present
-        expect(json_response[:user][:email]).to eq("new@example.com")
+        expect(json_response[:email]).to eq("new@example.com")
       end
 
       it "increments the user count" do
