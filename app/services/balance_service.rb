@@ -4,8 +4,7 @@ class BalanceService
   MAX_VALUE = 10_000_000_000 # $100M — adjustable via config if business requires
 
   def self.deposit(user_id:, amount:, idempotency_key:)
-    validate!(amount)
-    amount = parse(amount)
+    amount = prepare_amount(amount)
 
     ActiveRecord::Base.transaction do
       guard_idempotency!(idempotency_key)
@@ -17,8 +16,7 @@ class BalanceService
   end
 
   def self.withdraw(user_id:, amount:, idempotency_key:)
-    validate!(amount)
-    amount = parse(amount)
+    amount = prepare_amount(amount)
 
     ActiveRecord::Base.transaction do
       guard_idempotency!(idempotency_key)
@@ -32,8 +30,7 @@ class BalanceService
   end
 
   def self.transfer(sender_id:, recipient_email:, amount:, idempotency_key:)
-    validate!(amount)
-    amount = parse(amount)
+    amount = prepare_amount(amount)
 
     recipient_id = User.find_by!(email: recipient_email.downcase).id
     raise BadRequestError, "Cannot transfer to yourself" if sender_id == recipient_id
@@ -57,9 +54,9 @@ class BalanceService
   class << self
     private
 
-    def guard_idempotency!(key)
-      raise BadRequestError, "Idempotency-Key header is required" if key.blank?
-      raise DuplicateRequestError, "Duplicate request" if Transaction.exists?(idempotency_key: key)
+    def prepare_amount(value)
+      validate!(value)
+      Money.new(value)
     end
 
     def validate!(value)
@@ -70,8 +67,9 @@ class BalanceService
       raise BadRequestError, "Amount must be less than or equal to #{MAX_VALUE}" unless cents <= MAX_VALUE
     end
 
-    def parse(value)
-      Money.new(value)
+    def guard_idempotency!(key)
+      raise BadRequestError, "Idempotency-Key header is required" if key.blank?
+      raise DuplicateRequestError, "Duplicate request" if Transaction.exists?(idempotency_key: key)
     end
   end
 end
