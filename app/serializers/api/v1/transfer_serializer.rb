@@ -9,9 +9,9 @@ class Api::V1::TransferSerializer
 
   def as_json(*)
     {
-      sender: Api::V1::BalanceSerializer.new(sender).as_json,
-      recipient: Api::V1::UserSerializer.new(recipient).as_json,
-      amount: transaction.amount_cents
+      sender: Api::V1::BalanceSerializer.new(sender),
+      recipient: Api::V1::UserSerializer.new(recipient), #no balance here due to security reasons
+      transfered: Api::V1::TransactionSerializer.new(transaction)
     }
   end
 end

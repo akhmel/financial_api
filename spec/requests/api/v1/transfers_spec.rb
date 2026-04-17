@@ -17,8 +17,8 @@ RSpec.describe "Api::V1::Transfers" do
         expect(json_response[:sender][:email]).to eq(sender.email)
         expect(json_response[:sender][:balance]).to eq(70_000)
         expect(json_response[:recipient][:email]).to eq(recipient.email)
-        expect(json_response[:recipient][:balance]).to be_nil
-        expect(json_response[:amount]).to eq(30_000)
+        expect(json_response[:recipient]).not_to have_key(:balance)
+        expect(json_response[:transfered][:amount]).to eq(30_000)
       end
 
       it "debits the sender" do
