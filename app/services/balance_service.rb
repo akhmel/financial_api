@@ -55,8 +55,8 @@ class BalanceService
     private
 
     def prepare_amount(value)
-      cents = validate!(value)
-      Money.new(cents)
+      validate!(value)
+      Money.new(value)
     end
 
     def validate!(value)
