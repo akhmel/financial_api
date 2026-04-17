@@ -8,6 +8,7 @@ A concise Ruby on Rails API-only application for basic financial operations: use
 - PostgreSQL
 - JWT authentication (HS256)
 - [money-rails](https://github.com/RubyMoney/money-rails) — all monetary values are stored as integers (cents) to avoid floating-point precision issues
+- [active_model_serializers](https://github.com/rails-api/active_model_serializers) — consistent JSON responses via dedicated serializer classes
 - Mandatory `Idempotency-Key` header on all mutation endpoints to guarantee safe retries
 
 ## Setup
@@ -126,6 +127,6 @@ Response (`201 Created`):
 {
   "sender": { "email": "alice@example.com", "balance": 50000 },
   "recipient": { "email": "bob@example.com" },
-  "amount": 30000
+  "transfered": { "amount": 30000 }
 }
 ```

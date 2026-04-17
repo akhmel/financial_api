@@ -11,7 +11,7 @@ module Api
         end
 
         token = JwtService.encode({ user_id: user.id })
-        render json: { token: token }, status: :created
+        render json: SessionSerializer.new(token: token), status: :created
       end
     end
   end

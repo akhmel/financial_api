@@ -46,3 +46,5 @@ group :development, :test do
   gem "faker"
   gem "shoulda-matchers"
 end
+
+gem "active_model_serializers", "~> 0.10.16"
