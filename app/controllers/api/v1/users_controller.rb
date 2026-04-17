@@ -5,7 +5,7 @@ module Api
 
       def create
         user = User.create!(user_params)
-        render json: { email: user.email }, status: :created
+        render json: user, serializer: UserSerializer, status: :created
       end
 
       private

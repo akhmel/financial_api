@@ -55,8 +55,8 @@ class BalanceService
     private
 
     def prepare_amount(value)
-      validate!(value)
-      Money.new(value)
+      cents = validate!(value)
+      Money.new(cents)
     end
 
     def validate!(value)
@@ -65,6 +65,7 @@ class BalanceService
       cents = value.to_i
       raise BadRequestError, "Amount must be greater than or equal to #{MIN_VALUE}" unless cents >= MIN_VALUE
       raise BadRequestError, "Amount must be less than or equal to #{MAX_VALUE}" unless cents <= MAX_VALUE
+      cents
     end
 
     def guard_idempotency!(key)
