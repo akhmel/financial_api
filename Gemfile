@@ -48,3 +48,4 @@ group :development, :test do
 end
 
 gem "active_model_serializers", "~> 0.10.16"
+gem 'strong_migrations', '~> 2.6.0'
